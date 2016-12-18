@@ -6,12 +6,6 @@ final class YoutubeVideoAPI {
 
     static var lastFetchDate = Date()
 
-//    let date = Date()
-//
-//    let calendar = Calendar.current
-//    return calendar.date(byAdding: .hour, value: -10, to: date)!
-//}()
-
     static func fetchVideos() throws {
         let channels = try Channel.all()
 
@@ -83,7 +77,9 @@ final class YoutubeVideoAPI {
     static func sendVideosToBaseAPI(videos: [Video]) throws {
         let body = try Body.data(JSON(node: videos).makeBytes())
 
-        _ = try drop.client.post("http://simplernewstest.azurewebsites.net/api/Video/InsertBulk", headers: ["Content-Type" : "application/json"], body: body)
+        let response = try drop.client.post("http://simplernewstest.azurewebsites.net/api/Video/InsertBulk", headers: ["Content-Type" : "application/json"], body: body)
+
+        print(response)
     }
 
     static func sendChannelsToBaseAPI(channels: [Channel]) throws {

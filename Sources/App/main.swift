@@ -15,8 +15,7 @@ drop.resource("channels", channels)
 let videos = VideosController()
 drop.resource("videos", videos)
 
-_ = Timer.scheduledTimer(withTimeInterval: 300, repeats: true, block: { _ in
-    try? YoutubeVideoAPI.fetchVideos()
-})
+let timer = APICalls()
+
 
 drop.run()
