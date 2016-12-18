@@ -4,13 +4,13 @@ import HTTP
 
 final class YoutubeVideoAPI {
 
-    static var lastFetchDate: Date = {
-        let date = Date()
+    static var lastFetchDate = Date()
 
-        let calendar = Calendar.current
-        return calendar.date(byAdding: .hour, value: -10, to: date)!
-    }()
-
+//    let date = Date()
+//
+//    let calendar = Calendar.current
+//    return calendar.date(byAdding: .hour, value: -10, to: date)!
+//}()
 
     static func fetchVideos() throws {
         let channels = try Channel.all()
