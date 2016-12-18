@@ -1,6 +1,0 @@
-module CDispatch [system] {
-    /* requires blocks */
-    header "/usr/include/dispatch/dispatch.h"
-    export *
-    link "dispatch"
-}
