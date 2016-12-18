@@ -5,6 +5,16 @@ final class YoutubeVideoAPI {
 
     static var lastFetchDate = Date()
 
+    static func fetchVideos() throws {
+        let channels = try Channel.all()
+
+        for channel in channels {
+            try? YoutubeVideoAPI.youtubeAPIGetPlaylistVideos(playlistId: channel.uploadPlaylsitId)
+        }
+
+        YoutubeVideoAPI.lastFetchDate = Date()
+    }
+
     static func youtubeAPIGetPlaylistVideos(playlistId: String) throws {
         let videosResponse = try drop.client.get("https://www.googleapis.com/youtube/v3/playlistItems?part=id,contentDetails&playlistId=\(playlistId)&key=AIzaSyBSsdJSTQ3uvLOH1MgN6joX_cxfs4Tmflw&maxResults=50")
 

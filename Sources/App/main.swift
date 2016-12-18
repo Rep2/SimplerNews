@@ -1,6 +1,6 @@
 import Vapor
 import VaporMongo
-
+import Foundation
 
 let drop = Droplet()
 
@@ -14,5 +14,9 @@ drop.resource("channels", channels)
 
 let videos = VideosController()
 drop.resource("videos", videos)
+
+_ = Timer.scheduledTimer(withTimeInterval: 300, repeats: true, block: { _ in
+    try? YoutubeVideoAPI.fetchVideos()
+})
 
 drop.run()

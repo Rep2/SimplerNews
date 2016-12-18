@@ -9,13 +9,7 @@ class VideosController: ResourceRepresentable {
     }
 
     func create(request: Request) throws -> ResponseRepresentable {
-        let channels = try Channel.all()
-
-        for channel in channels {
-            try? YoutubeVideoAPI.youtubeAPIGetPlaylistVideos(playlistId: channel.uploadPlaylsitId)
-        }
-
-        YoutubeVideoAPI.lastFetchDate = Date()
+        try YoutubeVideoAPI.fetchVideos()
 
         return ""
     }
