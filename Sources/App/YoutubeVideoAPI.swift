@@ -1,5 +1,6 @@
 import Foundation
 import Vapor
+import HTTP
 
 final class YoutubeVideoAPI {
 
@@ -14,24 +15,36 @@ final class YoutubeVideoAPI {
     static func fetchVideos() throws {
         let channels = try Channel.all()
 
+        var allVideos = [Video]()
+
         for channel in channels {
-            try? YoutubeVideoAPI.youtubeAPIGetPlaylistVideos(playlistId: channel.uploadPlaylsitId)
+            if let videos = try? YoutubeVideoAPI.youtubeAPIGetPlaylistVideos(playlistId: channel.uploadPlaylsitId) {
+                allVideos.append(contentsOf: videos)
+            }
         }
 
         YoutubeVideoAPI.lastFetchDate = Date()
+
+        try sendVideosToBaseAPI(videos: allVideos)
     }
 
-    static func youtubeAPIGetPlaylistVideos(playlistId: String) throws {
+    static func youtubeAPIGetPlaylistVideos(playlistId: String) throws -> [Video] {
         let videosResponse = try drop.client.get("https://www.googleapis.com/youtube/v3/playlistItems?part=id,contentDetails&playlistId=\(playlistId)&key=AIzaSyBSsdJSTQ3uvLOH1MgN6joX_cxfs4Tmflw&maxResults=50")
+
+        var videos = [Video]()
 
         if let items = videosResponse.json?["items"]?.pathIndexableArray {
             for item in items {
-                try videoFromYoutubeJSON(json: item)
+                if let video = try? videoFromYoutubeJSON(json: item) {
+                    videos.append(video)
+                }
             }
         }
+
+        return videos
     }
 
-    static func videoFromYoutubeJSON(json: JSON) throws {
+    static func videoFromYoutubeJSON(json: JSON) throws -> Video {
         guard let videoId = json["contentDetails"]?["videoId"]?.string, let videoPublishedAt = json["contentDetails"]?["videoPublishedAt"]?.string else {
             throw Abort.custom(status: .badRequest, message: "Youtube video item parsing failed")
         }
@@ -39,12 +52,14 @@ final class YoutubeVideoAPI {
         let videoPublishedAtDate = try parseDate(date: videoPublishedAt)
 
         guard videoPublishedAtDate >= YoutubeVideoAPI.lastFetchDate else {
-            return
+            throw Abort.custom(status: .badRequest, message: "Video parsing failed")
         }
 
         var video = try fetchVideoDetails(id: videoId)
 
         try video.save()
+
+        return video
     }
 
     static func fetchVideoDetails(id: String) throws -> Video {
@@ -62,6 +77,17 @@ final class YoutubeVideoAPI {
         }
         
         return videoPublishedAtDate
+    }
+
+    static func sendVideosToBaseAPI(videos: [Video]) throws {
+        let json = try JSON(node: videos)
+        let body = try Body.data(json.makeBytes())
+
+        print(try String(bytes: body.bytes!))
+
+        let response = try drop.client.put("http://simplernewstest.azurewebsites.net/api/Video/InsertBulk", headers: ["Content-Type" : "application/json"], body: body)
+
+        print(response)
     }
 
 }

@@ -13,7 +13,7 @@ final class Video: Model {
             throw Abort.custom(status: .badRequest, message: "Failed to parse video details response")
         }
 
-        return Video(json: items)
+        return Video(json: items.pathIndexableArray?.first ?? items)
     }
 
     init(json: JSON) {
