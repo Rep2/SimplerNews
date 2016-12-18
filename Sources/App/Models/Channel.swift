@@ -56,6 +56,15 @@ final class Channel: Model {
             ])
     }
 
+    func jsonFormAPI() throws -> Node {
+        return try Node(node: [
+            "Id" : 0,
+            "Name" : name,
+            "YoutubeChannelId" : youtubeChannelId,
+            "UploadPlaylistId" : uploadPlaylsitId
+            ])
+    }
+
     static func prepare(_ database: Database) throws {}
     static func revert(_ database: Database) throws {}
 }

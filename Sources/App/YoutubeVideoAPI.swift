@@ -25,6 +25,7 @@ final class YoutubeVideoAPI {
 
         YoutubeVideoAPI.lastFetchDate = Date()
 
+        try sendChannelsToBaseAPI(channels: Channel.all())
         try sendVideosToBaseAPI(videos: allVideos)
     }
 
@@ -80,14 +81,25 @@ final class YoutubeVideoAPI {
     }
 
     static func sendVideosToBaseAPI(videos: [Video]) throws {
-        let json = try JSON(node: videos)
-        let body = try Body.data(json.makeBytes())
+        let body = try Body.data(JSON(node: videos).makeBytes())
 
         print(try String(bytes: body.bytes!))
 
-        let response = try drop.client.put("http://simplernewstest.azurewebsites.net/api/Video/InsertBulk", headers: ["Content-Type" : "application/json"], body: body)
+        let response = try drop.client.post("http://simplernewstest.azurewebsites.net/api/Video/InsertBulk", headers: ["Content-Type" : "application/json"], body: body)
 
         print(response)
     }
+
+    static func sendChannelsToBaseAPI(channels: [Channel]) throws {
+        let json = channels.map { try? $0.jsonFormAPI() }.flatMap { $0 }
+        let body = try Body.data(JSON(node: json).makeBytes())
+
+        print(try String(bytes: body.bytes!))
+
+        let response = try drop.client.post("http://simplernewstest.azurewebsites.net/api/YoutubeChannel/InsertOrUpdateBulk", headers: ["Content-Type" : "application/json"], body: body)
+
+        print(response)
+    }
+
 
 }
