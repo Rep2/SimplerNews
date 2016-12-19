@@ -7,11 +7,9 @@ public class APICalls {
     }
 
     func callAPI() {
-        DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1) {
-
-            print("sadadsasd")
+        DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 300) {
+            try? YoutubeVideoAPI.fetchVideos()
             self.callAPI()
         }
-       // try? YoutubeVideoAPI.fetchVideos()
     }
 }
