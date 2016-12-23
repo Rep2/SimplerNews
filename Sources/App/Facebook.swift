@@ -15,7 +15,7 @@ final class Facebook {
 
         let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
 
-        let user = try loginUser(userId: userId, accessToken: accessToken)
+        var user = try loginUser(userId: userId, accessToken: accessToken)
 
         DispatchQueue.global(qos: .background).async {
             do {
@@ -43,7 +43,7 @@ final class Facebook {
 
         let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
 
-        let user = try loginUser(userId: userId, accessToken: accessToken)
+        var user = try loginUser(userId: userId, accessToken: accessToken)
 
         let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
 
