@@ -28,6 +28,10 @@ drop.post("facebook/user_details") { request in
     try Facebook().facebookGetUserDetails(request: request)
 }
 
+drop.post("twitter") { request in
+    try Twitter().twitterLogin(request: request)
+}
+
 let timer = APICalls()
 
 drop.run()

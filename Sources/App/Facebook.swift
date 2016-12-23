@@ -116,7 +116,7 @@ final class Facebook {
         }
 
         if let body = body as? [String : Any], let email = body["email"] as? String {
-            let accessToken = randomString(length: 40)
+            let accessToken = UUID().uuidString
 
             if let users = try? User.query().filter("email", email).run(), let user = users.first {
                 user.accessToken = accessToken
