@@ -16,12 +16,16 @@ drop.resource("channels", channels)
 let videos = VideosController()
 drop.resource("videos", videos)
 
-drop.post("facebook/user_details") { request in
-    try Facebook().facebookGetUserDetails(request: request)
-}
-
 drop.post("facebook") { request in
     try Facebook().facebookLogin(request: request)
+}
+
+drop.post("facebook/user") { request in
+    try Facebook().facebookUser(request: request)
+}
+
+drop.post("facebook/user_details") { request in
+    try Facebook().facebookGetUserDetails(request: request)
 }
 
 let timer = APICalls()

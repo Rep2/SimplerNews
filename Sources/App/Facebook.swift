@@ -1,6 +1,7 @@
 import Vapor
 import HTTP
 import Foundation
+import Dispatch
 
 final class Facebook {
 
@@ -14,7 +15,43 @@ final class Facebook {
 
         let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
 
-        return try loginUser(userId: userId, accessToken: accessToken)
+        let user = try loginUser(userId: userId, accessToken: accessToken)
+
+        DispatchQueue.global(qos: .background).async {
+            do {
+                // TODO send user
+
+                let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
+
+                user.facebookJSON = userDetails
+
+                try user.save()
+
+                // TODO send data
+            } catch {
+                print("Fetch details faield")
+            }
+        }
+
+        return try JSON(node: user.makeNode())
+    }
+
+    func facebookUser(request: Request) throws -> ResponseRepresentable {
+        guard let accessToken = request.data["access_token"]?.string else {
+            throw Abort.custom(status: .badRequest, message: "Parameter access_token:string is required")
+        }
+
+        let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
+
+        let user = try loginUser(userId: userId, accessToken: accessToken)
+
+        let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
+
+        user.facebookJSON = userDetails
+
+        try user.save()
+
+        return user
     }
 
     func facebookGetUserDetails(request: Request) throws -> ResponseRepresentable {
@@ -67,7 +104,7 @@ final class Facebook {
         }
     }
 
-    func loginUser(userId: String, accessToken: String) throws -> ResponseRepresentable {
+    func loginUser(userId: String, accessToken: String) throws -> User {
         let response = try drop.client.get(
             "https://graph.facebook.com/v2.8/" +
                 "\(userId)" +
@@ -79,15 +116,21 @@ final class Facebook {
         }
 
         if let body = body as? [String : Any], let email = body["email"] as? String {
-            let user = User(email: email, facebookJSON: nil, twitterJSON: nil, googleJSON: nil)
+            let accessToken = randomString(length: 40)
 
-            return try user.makeJSON()
+            if let users = try? User.query().filter("email", email).run(), let user = users.first {
+                user.accessToken = accessToken
+
+                return user
+            } else {
+                return User(email: email, accessToken: accessToken)
+            }
         } else {
             throw Abort.custom(status: .badRequest, message: "Failed to fetch users email")
         }
     }
 
-    func fetchUserDetails(userId: String, accessToken: String) throws -> ResponseRepresentable {
+    func fetchUserDetails(userId: String, accessToken: String) throws -> JSON {
         let response = try drop.client.get(
             "https://graph.facebook.com/v2.8/" +
             "\(userId)" +
@@ -98,56 +141,51 @@ final class Facebook {
             throw Abort.custom(status: .badRequest, message: "Failed to parse Facebook user response")
         }
 
-        if let body = body as? [String : Any], let email = body["email"] as? String, let likesBody = body["likes"] as? [String : Any], let likes = likesBody["data"] as? [[String : String]] {
+        if let body = body as? [String : Any], let likesBody = body["likes"] as? [String : Any], let likes = likesBody["data"] as? [[String : String]] {
 
             var pages = [JSON]()
 
             for like in likes {
-                if let pageId = like["id"], let page = try? fetchFacebookPage(pageId: pageId, accessToken: accessToken) {
+                if let pageId = like["id"], let likedDate = like["created_time"], let page = try? fetchFacebookPage(pageId: pageId, accessToken: accessToken, likedDate: likedDate) {
                     pages.append(page)
                 }
             }
 
-            var details = userDetails(body: body)
+            var details = userDetails(body: body, accessToken: accessToken)
             details["likes"] = try? JSON(node: pages)
 
-            if var user = try User.query().filter("email", email).run().first {
-                user.facebookJSON = try JSON(node: details)
-
-                try user.save()
-
-                return user
-            } else {
-                return try JSON(node: details)
-            }
+            return try JSON(node: details)
+        } else {
+            throw Abort.badRequest
         }
-
-        return ""
     }
 
-    func fetchFacebookPage(pageId: String, accessToken: String) throws -> JSON {
+    func fetchFacebookPage(pageId: String, accessToken: String, likedDate: String) throws -> JSON {
         let response = try drop.client.get(
-            "https://graph.facebook.com/v2.8/989496041107256?fields=about,category,description",
+            "https://graph.facebook.com/v2.8/\(pageId)" +
+            "?fields=about,category,description",
             headers: ["Authorization" : "Bearer \(accessToken)"])
 
         guard let bytes = response.body.bytes, let body = try? JSONSerialization.jsonObject(with: Data(bytes: bytes), options: []) else {
             throw Abort.custom(status: .badRequest, message: "Failed to parse Facebook page response")
         }
 
-        guard let _ = body as? [String : String] else {
+        guard var editableBody = body as? [String : String] else {
             throw Abort.custom(status: .badRequest, message: "Invalid facebook page response")
         }
 
-        return try JSON(bytes: bytes)
+        editableBody["liked_date"] = likedDate
+
+        return try JSON(bytes: JSONSerialization.data(withJSONObject: editableBody, options: []).makeBytes())
     }
 
-    func userDetails(body: [String : Any]) -> [String : NodeRepresentable] {
+    func userDetails(body: [String : Any], accessToken: String) -> [String : NodeRepresentable] {
         var data = [String : NodeRepresentable]()
 
-        data["email"] = body["email"] as? String
         data["name"] = body["name"] as? String
         data["gender"] = body["gender"] as? String
-        data["id"] = body["id"] as? String
+        data["facebook_id"] = body["id"] as? String
+        data["access_token"] = accessToken
 
         return data
     }
