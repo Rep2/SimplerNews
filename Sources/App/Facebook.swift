@@ -15,11 +15,12 @@ final class Facebook {
 
         let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
 
-        var user = try loginUser(userId: userId, accessToken: accessToken)
+        let apiAccessToken = UUID().uuidString
 
         DispatchQueue.global(qos: .background).async {
             do {
                 // TODO send user
+                var user = try self.loginUser(userId: userId, accessToken: accessToken, apiAccessToken: apiAccessToken)
 
                 let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
 
@@ -33,35 +34,7 @@ final class Facebook {
             }
         }
 
-        return try JSON(node: user.makeNode())
-    }
-
-    func facebookUser(request: Request) throws -> ResponseRepresentable {
-        guard let accessToken = request.data["access_token"]?.string else {
-            throw Abort.custom(status: .badRequest, message: "Parameter access_token:string is required")
-        }
-
-        let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
-
-        var user = try loginUser(userId: userId, accessToken: accessToken)
-
-        let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
-
-        user.facebookJSON = userDetails
-
-        try user.save()
-
-        return user
-    }
-
-    func facebookGetUserDetails(request: Request) throws -> ResponseRepresentable {
-        guard let accessToken = request.data["access_token"]?.string else {
-            throw Abort.custom(status: .badRequest, message: "Parameter access_token:string is required")
-        }
-
-        let userId = try validateAccessToken(accessToken: accessToken, appAccessToken: getFacebookAppAccessToken())
-
-        return try fetchUserDetails(userId: userId, accessToken: accessToken)
+        return apiAccessToken
     }
 
     func getFacebookAppAccessToken() throws -> String {
@@ -104,7 +77,7 @@ final class Facebook {
         }
     }
 
-    func loginUser(userId: String, accessToken: String) throws -> User {
+    func loginUser(userId: String, accessToken: String, apiAccessToken: String) throws -> User {
         let response = try drop.client.get(
             "https://graph.facebook.com/v2.8/" +
                 "\(userId)" +
@@ -116,14 +89,12 @@ final class Facebook {
         }
 
         if let body = body as? [String : Any], let email = body["email"] as? String {
-            let accessToken = UUID().uuidString
-
             if let users = try? User.query().filter("email", email).run(), let user = users.first {
-                user.accessToken = accessToken
+                user.accessToken = apiAccessToken
 
                 return user
             } else {
-                return User(email: email, accessToken: accessToken)
+                return User(email: email, accessToken: apiAccessToken)
             }
         } else {
             throw Abort.custom(status: .badRequest, message: "Failed to fetch users email")

@@ -1,6 +1,7 @@
 import Vapor
 import HTTP
 import Foundation
+import Dispatch
 
 final class Twitter  {
 
@@ -15,16 +16,25 @@ final class Twitter  {
 
         let accessToken = UUID().uuidString
 
-        if let users = try? User.query().filter("email", email).run(), var user = users.first {
-            user.twitterJSON = try JSON(bytes: bytes)
-            user.accessToken = accessToken
+        DispatchQueue.global(qos: .background).async {
+            do {
+                // Todo send user
+                if let users = try? User.query().filter("email", email).run(), var user = users.first {
+                    user.twitterJSON = try JSON(bytes: bytes)
+                    user.accessToken = accessToken
 
-            try user.save()
+                    try user.save()
 
-            return try JSON(node: user.makeNode())
-        } else {
-            return User(email: email, accessToken: accessToken, twitterJSON: try? JSON(bytes: bytes))
+                    let user = try JSON(node: user.makeNode())
+                } else {
+                    let user = User(email: email, accessToken: accessToken, twitterJSON: try? JSON(bytes: bytes))
+                }
+            } catch {
+                print("Fetch details faield")
+            }
         }
+
+        return accessToken
     }
     
 }

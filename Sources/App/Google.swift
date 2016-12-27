@@ -1,6 +1,7 @@
 import Vapor
 import HTTP
 import Foundation
+import Dispatch
 
 final class Google {
 
@@ -13,7 +14,26 @@ final class Google {
 
         let (userId, email) = try verifyUser(idToken: idToken)
 
-        return try fetchUserProfile(userId: userId, email: email)
+        let accessToken = UUID().uuidString
+
+        DispatchQueue.global(qos: .background).async {
+            do {
+                // TODO send data
+
+                var user = self.fetchUser(email: email, accessToken: accessToken)
+
+                let userProfile = try self.fetchUserProfile(userId: userId, user: user)
+                user.googleJSON = userProfile
+
+                try user.save()
+
+                // TODO send data
+            } catch {
+                print("Fetch details faield")
+            }
+        }
+
+        return accessToken
     }
 
     func verifyUser(idToken: String) throws -> (String, String) {
@@ -31,34 +51,28 @@ final class Google {
         }
     }
 
-    func fetchUserProfile(userId: String, email: String) throws -> User {
+    func fetchUser(email: String, accessToken: String) -> User {
+        var user: User
+
+        if let users = try? User.query().filter("email", email).run(), let oldUser = users.first {
+            user = oldUser
+            user.accessToken = accessToken
+        } else {
+            user = User(email: email, accessToken: accessToken)
+        }
+
+        return user
+    }
+
+    func fetchUserProfile(userId: String, user: User) throws -> JSON {
         let response = try drop.client.get("https://content.googleapis.com/plus/v1/people/" +
             "\(userId)?" +
             "key=\(serverKey)")
 
-        guard let bytes = response.body.bytes, let body = try? JSONSerialization.jsonObject(with: Data(bytes: bytes), options: []) else {
+        guard let bytes = response.body.bytes, let _ = try? JSONSerialization.jsonObject(with: Data(bytes: bytes), options: []) else {
             throw Abort.custom(status: .badRequest, message: "Failed to parse Google user response")
         }
 
-        if let _ = body as? [String : Any] {
-            let accessToken = UUID().uuidString
-
-            var user: User
-
-            if let users = try? User.query().filter("email", email).run(), let oldUser = users.first {
-                user = oldUser
-                user.accessToken = accessToken
-            } else {
-                user = User(email: email, accessToken: accessToken)
-            }
-
-            user.googleJSON = try JSON(bytes: bytes)
-
-            try user.save()
-
-            return user
-        } else {
-            throw Abort.custom(status: .badRequest, message: "Failed to get Google user profile")
-        }
+        return try JSON(bytes: bytes)
     }
 }
