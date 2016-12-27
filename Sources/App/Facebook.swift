@@ -17,10 +17,11 @@ final class Facebook {
 
         let apiAccessToken = UUID().uuidString
 
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .utility).async {
             do {
-                // TODO send user
                 var user = try self.loginUser(userId: userId, accessToken: accessToken, apiAccessToken: apiAccessToken)
+
+                try SendUser.sendUser(user: user)
 
                 let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
 
@@ -28,7 +29,7 @@ final class Facebook {
 
                 try user.save()
 
-                // TODO send data
+                try SendUser.sendUser(user: user)
             } catch {
                 print("Fetch details faield")
             }

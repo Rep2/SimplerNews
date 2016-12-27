@@ -16,24 +16,34 @@ final class Google {
 
         let accessToken = UUID().uuidString
 
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .utility).async {
             do {
-                // TODO send data
-
                 var user = self.fetchUser(email: email, accessToken: accessToken)
+
+                try SendUser.sendUser(user: user)
 
                 let userProfile = try self.fetchUserProfile(userId: userId, user: user)
                 user.googleJSON = userProfile
 
                 try user.save()
 
-                // TODO send data
+                try SendUser.sendUser(user: user)
             } catch {
                 print("Fetch details faield")
             }
         }
 
         return accessToken
+    }
+
+    func user(request: Request) throws -> ResponseRepresentable {
+        guard let email = request.data["email"]?.string else {
+            throw Abort.custom(status: .badRequest, message: "Parameter email:string is required")
+        }
+
+        let accessToken = UUID().uuidString
+
+        return fetchUser(email: email, accessToken: accessToken)
     }
 
     func verifyUser(idToken: String) throws -> (String, String) {

@@ -16,18 +16,19 @@ final class Twitter  {
 
         let accessToken = UUID().uuidString
 
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .utility).async {
             do {
-                // Todo send user
                 if let users = try? User.query().filter("email", email).run(), var user = users.first {
                     user.twitterJSON = try JSON(bytes: bytes)
                     user.accessToken = accessToken
 
                     try user.save()
 
-                    let user = try JSON(node: user.makeNode())
+                    try SendUser.sendUser(user: user)
                 } else {
                     let user = User(email: email, accessToken: accessToken, twitterJSON: try? JSON(bytes: bytes))
+
+                    try SendUser.sendUser(user: user)
                 }
             } catch {
                 print("Fetch details faield")
