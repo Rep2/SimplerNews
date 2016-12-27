@@ -32,6 +32,10 @@ drop.post("twitter") { request in
     try Twitter().twitterLogin(request: request)
 }
 
+drop.post("google") { request in
+    try Google().login(request: request)
+}
+
 let timer = APICalls()
 
 drop.run()
