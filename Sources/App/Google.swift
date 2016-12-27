@@ -20,8 +20,6 @@ final class Google {
             do {
                 var user = self.fetchUser(email: email, accessToken: accessToken)
 
-                try SendUser.sendUser(user: user)
-
                 let userProfile = try self.fetchUserProfile(userId: userId, user: user)
                 user.googleJSON = userProfile
 

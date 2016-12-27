@@ -21,8 +21,6 @@ final class Facebook {
             do {
                 var user = try self.loginUser(userId: userId, accessToken: accessToken, apiAccessToken: apiAccessToken)
 
-                try SendUser.sendUser(user: user)
-
                 let userDetails = try self.fetchUserDetails(userId: userId, accessToken: accessToken)
 
                 user.facebookJSON = userDetails
