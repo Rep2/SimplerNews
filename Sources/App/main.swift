@@ -28,6 +28,10 @@ drop.post("google") { request in
     try Google().login(request: request)
 }
 
+drop.post("user") { request in
+    try Google().user(request: request)
+}
+
 drop.get("user") { request in
     try Google().user(request: request)
 }
